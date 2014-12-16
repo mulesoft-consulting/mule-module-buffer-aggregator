@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:bufferaggregator="http://www.mulesoft.org/schema/mule/bufferaggregator"
+      xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/bufferaggregator http://www.mulesoft.org/schema/mule/bufferaggregator/1.0.0-SNAPSHOT/mule-bufferaggregator.xsd">
+
+    <bufferaggregator:config name="buffer-aggregator-config" bufferSize="5" bufferTimeToLive="10000" />
+
+    <flow name="test-buffer-flow">
+        <bufferaggregator:buffer config-ref="buffer-aggregator-config" group="#[message.inboundProperties['group']]" key="#[message.inboundProperties['key']]" />
+    </flow>
+
+    <flow name="test-flush-buffer-flow">
+        <bufferaggregator:flush-buffer config-ref="buffer-aggregator-config" />
+    </flow>
+
+</mule>

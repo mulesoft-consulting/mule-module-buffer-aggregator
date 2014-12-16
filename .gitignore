@@ -12,6 +12,6 @@
 # Custom #
 # ------ #
 *.iml
-.ida/
+.idea/
 .mule/
 target/

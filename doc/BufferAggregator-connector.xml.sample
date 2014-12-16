@@ -1,0 +1,9 @@
+<!-- BEGIN_INCLUDE(bufferaggregator:buffer) -->
+    <bufferaggregator:config name="buffer-aggregator-config" bufferSize="5" bufferTimeToLive="10000" />
+    <bufferaggregator:buffer config-ref="buffer-aggregator-config" group="#[message.inboundProperties['group']]" key="#[message.inboundProperties['key']]" />
+<!-- END_INCLUDE(bufferaggregator:buffer) -->
+
+<!-- BEGIN_INCLUDE(bufferaggregator:flush-buffer) -->
+    <bufferaggregator:config name="buffer-aggregator-config" bufferSize="5" bufferTimeToLive="10000" />
+    <bufferaggregator:flush-buffer config-ref="buffer-aggregator-config" />
+<!-- END_INCLUDE(bufferaggregator:flush-buffer) -->
