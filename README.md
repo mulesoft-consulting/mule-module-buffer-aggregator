@@ -1,8 +1,10 @@
 
-Mulemodulebufferaggregator
+Mule Module Buffer Aggregator
 =========================
 
-FILL IN DESCRIPTION
+This module allows to buffer the payloads of the incoming messages and send them as an aggregated message once the buffer is has reached the maximum threshold or is flushed.
+It is possible to aggregate by groups which will act as separate buffers.
+When a buffer is flushed the incoming message order is preserved.
 
 Installation and Usage
 ----------------------
