@@ -20,9 +20,6 @@ import org.mule.api.store.ListableObjectStore;
 import org.mule.api.store.ObjectDoesNotExistException;
 import org.mule.api.store.ObjectStoreException;
 import org.mule.api.store.ObjectStoreManager;
-import org.mule.api.transaction.Transaction;
-import org.mule.transaction.TransactionCoordination;
-import org.omg.CORBA.ValueBaseHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -173,18 +170,20 @@ public class BufferAggregatorModule
                     afterChain.process(aggregatedPayloads);
                 }
 
-                // Clear the buffer
-                cleanBuffer(buffer, sortedKeys);
-
                 try
                 {
+                    // Clean the buffer
+                    cleanBuffer(buffer, sortedKeys);
                     groups.remove(group);
                 }
                 catch (ObjectDoesNotExistException e)
                 {
                     // Do nothing as the key does not exist
                 }
-
+                catch (Exception e)
+                {
+                    logger.error("Buffered messages wer successfully sent, but it was not possible to clean the buffer for group '" + group + "', this might cause some messages to be sent more that once", e);
+                }
             }
         }
         catch (Exception e)
@@ -195,9 +194,14 @@ public class BufferAggregatorModule
                     buffer.remove(actualKey);
                 }
             }
-            catch (ObjectStoreException ose)
+            catch (ObjectDoesNotExistException ex)
             {
-                // Do nothing as we are already in an exception scope
+                // Do nothing as the key does not exist
+            }
+            catch (Exception ex)
+            {
+                String currentKey = actualKey.substring(0, actualKey.lastIndexOf("-"));
+                logger.error("Unable to remove the latest message from the object store, this will cause the messages to be sent more that once (group: " + group + ", key: " + currentKey + ")", e);
             }
 
             throw new BufferException("Unable to buffer message", e);
@@ -253,16 +257,19 @@ public class BufferAggregatorModule
                             afterChain.process(aggregatedPayloads);
                         }
 
-                        // Clear the buffer
-                        cleanBuffer(buffer, sortedKeys);
-
                         try
                         {
-                            groups.remove(allKeys.get(i));
+                            // Clean the buffer
+                            cleanBuffer(buffer, sortedKeys);
+                            groups.remove(group);
                         }
                         catch (ObjectDoesNotExistException e)
                         {
                             // Do nothing as the key does not exist
+                        }
+                        catch (Exception e)
+                        {
+                            logger.error("Buffered messages wer successfully sent, but it was not possible to clean the buffer for group '" + group + "' (this might cause some messages to be sent more than once)", e);
                         }
                     }
                     catch (Exception e)
