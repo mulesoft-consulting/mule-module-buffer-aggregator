@@ -221,10 +221,20 @@ public class BufferAggregatorModule
             ListableObjectStore<Long> groups = (ListableObjectStore<Long>) objectStoreManager.getObjectStore(storePrefix + "." + BUFFER_GROUPS_STORE);
             List<Serializable> allKeys = groups.allKeys();
 
-            for (int i = 0; i < allKeys.size(); i++) {
-                long time = groups.retrieve(allKeys.get(i));
+            for (int i = 0; i < allKeys.size(); i++)
+            {
+                long time = -1;
+                try
+                {
+                    time = groups.retrieve(allKeys.get(i));
+                }
+                catch (ObjectDoesNotExistException e)
+                {
+                    // Do nothing as the key does not exist
+                }
+
                 // Aggregate all the payloads and flush the buffer
-                if (time + bufferTimeToLive < System.currentTimeMillis()) {
+                if (time > -1 && (time + bufferTimeToLive < System.currentTimeMillis())) {
                     String group = (String) allKeys.get(i);
 
                     Lock lock = muleContext.getLockFactory().createLock(group);
@@ -257,14 +267,13 @@ public class BufferAggregatorModule
                     }
                     catch (Exception e)
                     {
-                        logger.error("Unable to flush expired buffer for group: " + group, e);
+                        throw new BufferException("Unable to flush expired buffer for group: " + group, e);
                     }
                     finally
                     {
                         lock.unlock();
                     }
                 }
-
             }
         }
         catch (Exception e)
