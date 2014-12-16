@@ -22,6 +22,7 @@ import org.mule.api.store.ObjectStoreException;
 import org.mule.api.store.ObjectStoreManager;
 import org.mule.api.transaction.Transaction;
 import org.mule.transaction.TransactionCoordination;
+import org.omg.CORBA.ValueBaseHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -132,9 +133,11 @@ public class BufferAggregatorModule
         Lock lock = muleContext.getLockFactory().createLock(group);
         lock.lock();
 
+        String actualKey = null;
+        ListableObjectStore<Serializable> buffer = null;
+
         try
         {
-            @SuppressWarnings("unchecked")
             ListableObjectStore<Long> groups = (ListableObjectStore<Long>) objectStoreManager.getObjectStore(storePrefix + "." + BUFFER_GROUPS_STORE);
 
             if(!groups.contains(group))
@@ -142,10 +145,11 @@ public class BufferAggregatorModule
                 groups.store(group, System.currentTimeMillis());
             }
 
-            @SuppressWarnings("unchecked")
-            ListableObjectStore<Serializable> buffer = (ListableObjectStore<Serializable>) objectStoreManager.getObjectStore(storePrefix + "." + group);
-            buffer.store((key + "-" + System.currentTimeMillis()), payload);
+            actualKey = key + "-" + System.currentTimeMillis();
+            buffer = (ListableObjectStore<Serializable>) objectStoreManager.getObjectStore(storePrefix + "." + group);
+            buffer.store(actualKey, payload);
 
+            /*
             // This is to minimise duplicates in case of unexpected shutdown
             Transaction tx = TransactionCoordination.getInstance().getTransaction();
             if (tx != null && tx.isBegun())
@@ -153,6 +157,7 @@ public class BufferAggregatorModule
                 // Commit current transaction as the payload is stored into the object store
                 tx.commit();
             }
+            */
 
             List<Serializable> allKeys = buffer.allKeys();
 
@@ -184,6 +189,17 @@ public class BufferAggregatorModule
         }
         catch (Exception e)
         {
+            try
+            {
+                if (buffer != null && actualKey != null) {
+                    buffer.remove(actualKey);
+                }
+            }
+            catch (ObjectStoreException ose)
+            {
+                // Do nothing as we are already in an exception scope
+            }
+
             throw new BufferException("Unable to buffer message", e);
         }
         finally
@@ -202,7 +218,6 @@ public class BufferAggregatorModule
     public void flushBuffer(SourceCallback afterChain) throws BufferException
     {
         try {
-            @SuppressWarnings("unchecked")
             ListableObjectStore<Long> groups = (ListableObjectStore<Long>) objectStoreManager.getObjectStore(storePrefix + "." + BUFFER_GROUPS_STORE);
             List<Serializable> allKeys = groups.allKeys();
 
@@ -216,7 +231,6 @@ public class BufferAggregatorModule
                     lock.lock();
 
                     try {
-                        @SuppressWarnings("unchecked")
                         ListableObjectStore<Serializable> buffer = (ListableObjectStore<Serializable>) objectStoreManager.getObjectStore(storePrefix + "." + group);
                         List<Serializable> bufferAllKeys = buffer.allKeys();
 
@@ -232,7 +246,8 @@ public class BufferAggregatorModule
                         // Clear the buffer
                         cleanBuffer(buffer, sortedKeys);
 
-                        try {
+                        try
+                        {
                             groups.remove(allKeys.get(i));
                         }
                         catch (ObjectDoesNotExistException e)
