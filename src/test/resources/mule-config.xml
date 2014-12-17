@@ -8,7 +8,7 @@
         http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
         http://www.mulesoft.org/schema/mule/bufferaggregator http://www.mulesoft.org/schema/mule/bufferaggregator/1.0.0-SNAPSHOT/mule-bufferaggregator.xsd">
 
-    <bufferaggregator:config name="buffer-aggregator-config" bufferSize="5" bufferTimeToLive="10000" />
+    <bufferaggregator:config name="buffer-aggregator-config" bufferSize="5" bufferTimeToLive="10000" persistent="false" />
 
     <flow name="test-buffer-flow">
         <bufferaggregator:buffer config-ref="buffer-aggregator-config" group="#[message.inboundProperties['group']]" key="#[message.inboundProperties['key']]" />

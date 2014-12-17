@@ -14,6 +14,8 @@ import org.mule.api.MuleContext;
 import org.mule.api.annotations.Module;
 import org.mule.api.annotations.Configurable;
 import org.mule.api.annotations.Processor;
+import org.mule.api.annotations.param.Default;
+import org.mule.api.annotations.param.Optional;
 import org.mule.api.annotations.param.Payload;
 import org.mule.api.callback.SourceCallback;
 import org.mule.api.store.ListableObjectStore;
@@ -60,6 +62,14 @@ public class BufferAggregatorModule
     @Configurable
     private String storePrefix;
 
+    /**
+     * Whether the messages in the buffer should be persisted (default is false)
+     */
+    @Configurable
+    @Optional
+    @Default("false")
+    private boolean persistent;
+
     @Inject
     private ObjectStoreManager objectStoreManager;
 
@@ -94,6 +104,16 @@ public class BufferAggregatorModule
     public String getStorePrefix()
     {
         return storePrefix;
+    }
+
+    public boolean isPersistent()
+    {
+        return persistent;
+    }
+
+    public void setPersistent(boolean persistent)
+    {
+        this.persistent = persistent;
     }
 
     public void setObjectStoreManager(ObjectStoreManager objectStoreManager)
@@ -135,7 +155,7 @@ public class BufferAggregatorModule
 
         try
         {
-            ListableObjectStore<Long> groups = (ListableObjectStore<Long>) objectStoreManager.getObjectStore(storePrefix + "." + BUFFER_GROUPS_STORE);
+            ListableObjectStore<Long> groups = (ListableObjectStore<Long>) objectStoreManager.getObjectStore(storePrefix + "." + BUFFER_GROUPS_STORE, persistent);
 
             if(!groups.contains(group))
             {
@@ -143,7 +163,7 @@ public class BufferAggregatorModule
             }
 
             actualKey = key + "-" + System.currentTimeMillis();
-            buffer = (ListableObjectStore<Serializable>) objectStoreManager.getObjectStore(storePrefix + "." + group);
+            buffer = (ListableObjectStore<Serializable>) objectStoreManager.getObjectStore(storePrefix + "." + group, persistent);
             buffer.store(actualKey, payload);
 
             /*
@@ -221,8 +241,9 @@ public class BufferAggregatorModule
     @Processor(intercepting = true)
     public void flushBuffer(SourceCallback afterChain) throws BufferException
     {
-        try {
-            ListableObjectStore<Long> groups = (ListableObjectStore<Long>) objectStoreManager.getObjectStore(storePrefix + "." + BUFFER_GROUPS_STORE);
+        try
+        {
+            ListableObjectStore<Long> groups = (ListableObjectStore<Long>) objectStoreManager.getObjectStore(storePrefix + "." + BUFFER_GROUPS_STORE, persistent);
             List<Serializable> allKeys = groups.allKeys();
 
             for (int i = 0; i < allKeys.size(); i++)
@@ -245,7 +266,7 @@ public class BufferAggregatorModule
                     lock.lock();
 
                     try {
-                        ListableObjectStore<Serializable> buffer = (ListableObjectStore<Serializable>) objectStoreManager.getObjectStore(storePrefix + "." + group);
+                        ListableObjectStore<Serializable> buffer = (ListableObjectStore<Serializable>) objectStoreManager.getObjectStore(storePrefix + "." + group, persistent);
                         List<Serializable> bufferAllKeys = buffer.allKeys();
 
                         List<String> sortedKeys = sortKeys(bufferAllKeys);
