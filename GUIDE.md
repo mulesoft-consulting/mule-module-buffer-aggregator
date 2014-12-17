@@ -110,7 +110,7 @@ This shows how to asynchronously trigger a buffer flush.
                                  bufferTimeToLive="15000"
                                  storePrefix="_buffer" />
                                  
-    <poll doc:name="Poll">
+    <poll>
         <fixed-frequency-scheduler frequency="5000" startDelay="2000"/>
         <bufferaggregator:flush-buffer config-ref="buffer-aggregator-config" />      
     </poll>
