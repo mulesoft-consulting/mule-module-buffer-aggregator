@@ -1,6 +1,14 @@
 Mule Buffer Aggregator - User Guide
 ===================================
 
+Module Features
+---------------
+
+These are the main features provided by the module:
+
+- Buffer: Aggregate incoming messages in groups sending them as a collection when the number reaches the maximum buffer size
+- Flush Buffer: Flushes the expired groups, so that the buffered messages are sent out as a collection even if the maximum buffer size has not been reached
+
 Configuration Reference
 -----------------------
 
@@ -15,161 +23,96 @@ The module configuration defines the global behaviour of the processor.
     <th style="width:10%" class="confluenceTh">Name</th><th style="width:10%" class="confluenceTh">Type</th><th style="width:10%" class="confluenceTh">Required</th><th style="width:10%" class="confluenceTh">Default</th><th class="confluenceTh">Description</th>
   </tr>
   <tr>
-    <td rowspan="1" class="confluenceTd">host</td><td style="text-align: center" class="confluenceTd">string</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">localhost</td><td class="confluenceTd">
+    <td rowspan="1" class="confluenceTd">bufferSize</td><td style="text-align: center" class="confluenceTd">integer</td><td style="text-align: center" class="confluenceTd">yes</td><td style="text-align: center" class="confluenceTd"></td><td class="confluenceTd">
       <p>
-          The main AMQP broker host to connect to.
+          The maximum size that a buffer correlation group in the buffer can reach before being flushed. 
         </p>
     </td>
   </tr>
   <tr>
-    <td rowspan="1" class="confluenceTd">port</td><td style="text-align: center" class="confluenceTd">port number</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">5672</td><td class="confluenceTd">
+    <td rowspan="1" class="confluenceTd">bufferTimeToLive</td><td style="text-align: center" class="confluenceTd">integer</td><td style="text-align: center" class="confluenceTd">yes</td><td style="text-align: center" class="confluenceTd"></td><td class="confluenceTd">
       <p>
-          The port to use to connect to the main
-          AMQP broker.
+          The maximum amount of time in milliseconds to wait before marking a buffer correlation group as expired.
+          All the expired buffers will be flushed even if the bufferSize threshold has not been reached. 
         </p>
     </td>
   </tr>
   <tr>
-    <td rowspan="1" class="confluenceTd">fallbackAddresses</td><td style="text-align: center" class="confluenceTd">string</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd"></td><td class="confluenceTd">
+    <td rowspan="1" class="confluenceTd">storePrefix</td><td style="text-align: center" class="confluenceTd">string</td><td style="text-align: center" class="confluenceTd">yes</td><td style="text-align: center" class="confluenceTd"></td><td class="confluenceTd">
       <p>
-          A comma-separated list of "host:port" or
-          "host", defining fallback brokers to attempt connection
-          to, should the connection to main broker fail.
+          The prefix to use for the Mule Object Store (this allows to configure multiple buffer aggregators in the same Mule Application).
         </p>
     </td>
   </tr>
   <tr>
-    <td rowspan="1" class="confluenceTd">virtualHost</td><td style="text-align: center" class="confluenceTd">string</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">/</td><td class="confluenceTd">
+    <td rowspan="1" class="confluenceTd">persistent</td><td style="text-align: center" class="confluenceTd">boolean</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">/</td>false<td class="confluenceTd">
       <p>
-          The virtual host to connect to on the
-          AMQP broker.
-        </p>
-    </td>
-  </tr>
-  <tr>
-    <td rowspan="1" class="confluenceTd">username</td><td style="text-align: center" class="confluenceTd">string</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">guest</td><td class="confluenceTd">
-      <p>
-          The user name to use to connect to the
-          AMQP broker.
-        </p>
-    </td>
-  </tr>
-  <tr>
-    <td rowspan="1" class="confluenceTd">password</td><td style="text-align: center" class="confluenceTd">string</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">guest</td><td class="confluenceTd">
-      <p>
-          The password to use to connect to the
-          AMQP broker.
-        </p>
-    </td>
-  </tr>
-  <tr>
-    <td rowspan="1" class="confluenceTd">deliveryMode</td><td style="text-align: center" class="confluenceTd"><b>PERSISTENT</b> / <b>NON_PERSISTENT</b></td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">PERSISTENT</td><td class="confluenceTd">
-      <p>
-          The delivery mode to use when publishing
-          to the AMQP broker.
-        </p>
-    </td>
-  </tr>
-  <tr>
-    <td rowspan="1" class="confluenceTd">priority</td><td style="text-align: center" class="confluenceTd"></td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">0</td><td class="confluenceTd">
-      <p>
-          The priority to use when publishing to
-          the AMQP broker.
-        </p>
-    </td>
-  </tr>
-  <tr>
-    <td rowspan="1" class="confluenceTd">mandatory</td><td style="text-align: center" class="confluenceTd">boolean</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">false</td><td class="confluenceTd">
-      <p>
-          This flag tells the server how to react
-          if the message cannot be
-          routed to a queue. If this flag is
-          set to true, the server will throw an exception for any
-          unroutable message. If this flag is false, the server
-          silently drops the message.
-        </p>
-    </td>
-  </tr>
-  <tr>
-    <td rowspan="1" class="confluenceTd">immediate</td><td style="text-align: center" class="confluenceTd">boolean</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">false</td><td class="confluenceTd">
-      <p>
-          This flag tells the server how to react
-          if the message cannot be
-          routed to a queue consumer
-          immediately. If this flag is set to true, the server
-          will
-          throw an exception for any undeliverable message. If
-          this
-          flag is false, the server will queue the message, but
-          with
-          no guarantee that it will ever be consumed.
-        </p>
-    </td>
-  </tr>
-  <tr>
-    <td rowspan="1" class="confluenceTd">default-return-endpoint-ref</td><td style="text-align: center" class="confluenceTd">string</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd"></td><td class="confluenceTd">
-      <p>
-          Reference to an endpoint to which AMQP
-          returned message should be
-          dispatched to.
-        </p>
-    </td>
-  </tr>
-  <tr>
-    <td rowspan="1" class="confluenceTd">ackMode</td><td style="text-align: center" class="confluenceTd"><b>AMQP_AUTO</b> / <b>MULE_AUTO</b> / <b>MANUAL</b></td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">AMQP_AUTO</td><td class="confluenceTd">
-      <p>
-          The acknowledgment mode to use when
-          consuming from the AMQP broker.
-        </p>
-    </td>
-  </tr>
-  <tr>
-    <td rowspan="1" class="confluenceTd">prefetchSize</td><td style="text-align: center" class="confluenceTd">integer</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">0</td><td class="confluenceTd">
-      <p>
-          The maximum amount of content (measured
-          in octets) that the server will deliver, 0 if unlimited.
-        </p>
-    </td>
-  </tr>
-  <tr>
-    <td rowspan="1" class="confluenceTd">prefetchCount</td><td style="text-align: center" class="confluenceTd">integer</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">0</td><td class="confluenceTd">
-      <p>
-          The maximum number of messages that the
-          server will deliver, 0 if unlimited.
-        </p>
-    </td>
-  </tr>
-  <tr>
-    <td rowspan="1" class="confluenceTd">noLocal</td><td style="text-align: center" class="confluenceTd">boolean</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">false</td><td class="confluenceTd">
-      <p>
-          If the no-local field is set the server
-          will not send messages to the connection that published
-          them.
-        </p>
-    </td>
-  </tr>
-  <tr>
-    <td rowspan="1" class="confluenceTd">exclusiveConsumers</td><td style="text-align: center" class="confluenceTd">boolean</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">false</td><td class="confluenceTd">
-      <p>
-          Set to true if the connector should only
-          create exclusive consumers.
-        </p>
-    </td>
-  </tr>
-    <tr>
-    <td rowspan="1" class="confluenceTd">numberOfConsumers</td><td style="text-align: center" class="confluenceTd">integer</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">4</td><td class="confluenceTd">
-      <p>
-          The number of concurrent consumer threads that will be used to receive AMQP messages.
-        </p>
-    </td>
-  </tr>
-  <tr>
-    <td rowspan="1" class="confluenceTd">activeDeclarationsOnly</td><td style="text-align: center" class="confluenceTd">boolean</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">false</td><td class="confluenceTd">
-      <p>
-          Defines if the connector should only do
-          active exchange and queue declarations or can also perform
-          passive declarations to enforce their existence.
+          Whether the messages in the buffer should be persisted.
+          In a Mule HA cluster the messages will be persisted in the memory grid regardless this attribute being true or false.
         </p>
     </td>
   </tr>
 </table>
+
+### Processors Attributes
+
+The following attributes are only available in the buffer processor.
+
+<table class="confluenceTable">
+  <tr>
+    <th style="width:10%" class="confluenceTh">Name</th><th style="width:10%" class="confluenceTh">Type</th><th style="width:10%" class="confluenceTh">Required</th><th style="width:10%" class="confluenceTh">Default</th><th class="confluenceTh">Description</th>
+  </tr>
+  <tr>
+    <td rowspan="1" class="confluenceTd">group</td><td style="text-align: center" class="confluenceTd">string</td><td style="text-align: center" class="confluenceTd">yes</td><td style="text-align: center" class="confluenceTd"></td><td class="confluenceTd">
+      <p>
+          Used to define a correlation group.
+          Correlation groups can be seen as separated buckets within the same buffer.
+        </p>
+    </td>
+  </tr>
+  <tr>
+    <td rowspan="1" class="confluenceTd">key</td><td style="text-align: center" class="confluenceTd">string</td><td style="text-align: center" class="confluenceTd">yes</td><td style="text-align: center" class="confluenceTd"></td><td class="confluenceTd">
+      <p>
+          The key used for storing the message into the correlation group (it does not necessarily need to be unique).
+        </p>
+    </td>
+  </tr>
+</table>
+
+Examples
+--------
+
+There are mainly two ways to use the Buffer Aggregator module. The following examples will demonstrate the common use cases.
+
+### Synchronous Buffering
+
+This shows how to configure the Buffer Aggregator to buffer incoming messages until the maximum buffer size is reached.
+ 
+    <bufferaggregator:config name="buffer-aggregator-config"
+                             bufferSize="5"
+                             bufferTimeToLive="15000"
+                             storePrefix="_buffer" />
+                             
+    <inbound-endpoint />
+    
+    <bufferaggregator:buffer config-ref="buffer-aggregator-config"
+                             group="#[message.inboundProperties['group']]"
+                             key="#[message.inboundProperties['key']]" />
+                             
+    <outbound-endpoint />
+    
+### Asynchronous Buffer Flushing
+
+This shows how to asynchronously trigger a buffer flush.
+
+    <bufferaggregator:config name="buffer-aggregator-config"
+                                 bufferSize="5"
+                                 bufferTimeToLive="15000"
+                                 storePrefix="_buffer" />
+                                 
+    <poll doc:name="Poll">
+        <fixed-frequency-scheduler frequency="5000" startDelay="2000"/>
+        <bufferaggregator:flush-buffer config-ref="buffer-aggregator-config" />      
+    </poll>
+
+
