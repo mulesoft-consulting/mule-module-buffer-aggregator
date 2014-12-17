@@ -45,7 +45,7 @@ The module configuration defines the global behaviour of the processor.
     </td>
   </tr>
   <tr>
-    <td rowspan="1" class="confluenceTd">persistent</td><td style="text-align: center" class="confluenceTd">boolean</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">/</td>false<td class="confluenceTd">
+    <td rowspan="1" class="confluenceTd">persistent</td><td style="text-align: center" class="confluenceTd">boolean</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">false</td><td class="confluenceTd">
       <p>
           Whether the messages in the buffer should be persisted.
           In a Mule HA cluster the messages will be persisted in the memory grid regardless this attribute being true or false.
@@ -114,5 +114,7 @@ This shows how to asynchronously trigger a buffer flush.
         <fixed-frequency-scheduler frequency="5000" startDelay="2000"/>
         <bufferaggregator:flush-buffer config-ref="buffer-aggregator-config" />      
     </poll>
+    
+    <outbound-endpoint />
 
 
