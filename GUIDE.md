@@ -7,7 +7,7 @@ Module Features
 These are the main features provided by the module:
 
 - **Buffer** - Aggregates incoming messages in groups sending them as a collection when the number reaches the maximum buffer size
-- **Flush Buffer** - Flushs all the expired groups, so that the buffered messages are sent out as a collection even if the maximum buffer size has not been reached
+- **Flush Buffer** - Flushes all the expired groups, so that the buffered messages are sent out as a collection even if the maximum buffer size has not been reached
 
 Configuration Reference
 -----------------------
