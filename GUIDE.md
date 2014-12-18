@@ -65,7 +65,7 @@ The following attributes are only available in the buffer processor.
   <tr>
     <td rowspan="1" class="confluenceTd">group</td><td style="text-align: center" class="confluenceTd">string</td><td style="text-align: center" class="confluenceTd">yes</td><td style="text-align: center" class="confluenceTd"></td><td class="confluenceTd">
       <p>
-          Used to specify an aggregation group (aggregation groups can be seen as separated buckets within the same buffer).
+          Used to specify an aggregation group (aggregation groups can be seen as separate buckets within the same buffer).
         </p>
     </td>
   </tr>
