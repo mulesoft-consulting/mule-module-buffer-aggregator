@@ -6,8 +6,8 @@ Module Features
 
 These are the main features provided by the module:
 
-- **Buffer** - Aggregate incoming messages in groups sending them as a collection when the number reaches the maximum buffer size
-- **Flush Buffer** - Flushes all the expired groups, so that the buffered messages are sent out as a collection even if the maximum buffer size has not been reached
+- **Buffer** - Aggregates incoming messages in groups sending them as a collection when the number reaches the maximum buffer size
+- **Flush Buffer** - Flushs all the expired groups, so that the buffered messages are sent out as a collection even if the maximum buffer size has not been reached
 
 Configuration Reference
 -----------------------
@@ -33,7 +33,7 @@ The module configuration defines the global behaviour of the processor.
     <td rowspan="1" class="confluenceTd">bufferTimeToLive</td><td style="text-align: center" class="confluenceTd">integer</td><td style="text-align: center" class="confluenceTd">yes</td><td style="text-align: center" class="confluenceTd"></td><td class="confluenceTd">
       <p>
           The maximum amount of time in milliseconds to wait before marking an aggregation group as expired.
-          All the expired groups will be flushed even if the `bufferSize` threshold has not been reached. 
+          All the expired groups will be flushed even if the bufferSize threshold has not been reached. 
         </p>
     </td>
   </tr>
