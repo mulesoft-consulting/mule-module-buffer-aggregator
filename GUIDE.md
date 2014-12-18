@@ -6,8 +6,8 @@ Module Features
 
 These are the main features provided by the module:
 
-- Buffer: Aggregate incoming messages in groups sending them as a collection when the number reaches the maximum buffer size
-- Flush Buffer: Flushes the expired groups, so that the buffered messages are sent out as a collection even if the maximum buffer size has not been reached
+- **Buffer** - Aggregate incoming messages in groups sending them as a collection when the number reaches the maximum buffer size
+- **Flush Buffer** - Flushes all the expired groups, so that the buffered messages are sent out as a collection even if the maximum buffer size has not been reached
 
 Configuration Reference
 -----------------------
@@ -25,15 +25,15 @@ The module configuration defines the global behaviour of the processor.
   <tr>
     <td rowspan="1" class="confluenceTd">bufferSize</td><td style="text-align: center" class="confluenceTd">integer</td><td style="text-align: center" class="confluenceTd">yes</td><td style="text-align: center" class="confluenceTd"></td><td class="confluenceTd">
       <p>
-          The maximum size that a buffer correlation group in the buffer can reach before being flushed. 
+          The maximum size that an aggregation group in the buffer can reach before being flushed. 
         </p>
     </td>
   </tr>
   <tr>
     <td rowspan="1" class="confluenceTd">bufferTimeToLive</td><td style="text-align: center" class="confluenceTd">integer</td><td style="text-align: center" class="confluenceTd">yes</td><td style="text-align: center" class="confluenceTd"></td><td class="confluenceTd">
       <p>
-          The maximum amount of time in milliseconds to wait before marking a buffer correlation group as expired.
-          All the expired buffers will be flushed even if the bufferSize threshold has not been reached. 
+          The maximum amount of time in milliseconds to wait before marking an aggregation group as expired.
+          All the expired groups will be flushed even if the `bufferSize` threshold has not been reached. 
         </p>
     </td>
   </tr>
@@ -47,7 +47,7 @@ The module configuration defines the global behaviour of the processor.
   <tr>
     <td rowspan="1" class="confluenceTd">persistent</td><td style="text-align: center" class="confluenceTd">boolean</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd">false</td><td class="confluenceTd">
       <p>
-          Whether the messages in the buffer should be persisted.
+          Whether messages in the buffer should be persisted.
           In a Mule HA cluster the messages will be persisted in the memory grid regardless this attribute being true or false.
         </p>
     </td>
@@ -65,15 +65,14 @@ The following attributes are only available in the buffer processor.
   <tr>
     <td rowspan="1" class="confluenceTd">group</td><td style="text-align: center" class="confluenceTd">string</td><td style="text-align: center" class="confluenceTd">yes</td><td style="text-align: center" class="confluenceTd"></td><td class="confluenceTd">
       <p>
-          Used to define a correlation group.
-          Correlation groups can be seen as separated buckets within the same buffer.
+          Used to specify an aggregation group (aggregation groups can be seen as separated buckets within the same buffer).
         </p>
     </td>
   </tr>
   <tr>
-    <td rowspan="1" class="confluenceTd">key</td><td style="text-align: center" class="confluenceTd">string</td><td style="text-align: center" class="confluenceTd">yes</td><td style="text-align: center" class="confluenceTd"></td><td class="confluenceTd">
+    <td rowspan="1" class="confluenceTd">key</td><td style="text-align: center" class="confluenceTd">string</td><td style="text-align: center" class="confluenceTd">no</td><td style="text-align: center" class="confluenceTd"></td><td class="confluenceTd">
       <p>
-          The key used for storing the message into the correlation group (it does not necessarily need to be unique).
+          Used to package messages together withing the same aggregation group.
         </p>
     </td>
   </tr>
