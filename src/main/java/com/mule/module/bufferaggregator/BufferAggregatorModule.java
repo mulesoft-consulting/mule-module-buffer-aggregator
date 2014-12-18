@@ -22,6 +22,8 @@ import org.mule.api.store.ListableObjectStore;
 import org.mule.api.store.ObjectDoesNotExistException;
 import org.mule.api.store.ObjectStoreException;
 import org.mule.api.store.ObjectStoreManager;
+import org.mule.api.transaction.Transaction;
+import org.mule.transaction.TransactionCoordination;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +32,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.locks.Lock;
 
 /**
@@ -142,10 +145,10 @@ public class BufferAggregatorModule
      * {@sample.xml ../../../doc/BufferAggregator-connector.xml.sample bufferaggregator:buffer}
      *
      * @param group Identifies the group under which buffer the message
-     * @param key The key used to store the message in the buffer
+     * @param key Used to package messages together withing the same group
      */
     @Processor(intercepting = true)
-    public void buffer(SourceCallback afterChain, String group, String key, @Payload Serializable payload) throws BufferException
+    public void buffer(SourceCallback afterChain, String group, @Optional String key, @Payload Serializable payload) throws BufferException
     {
         Lock lock = muleContext.getLockFactory().createLock(group);
         lock.lock();
@@ -162,19 +165,17 @@ public class BufferAggregatorModule
                 groups.store(group, System.currentTimeMillis());
             }
 
-            actualKey = key + "-" + System.currentTimeMillis();
+            if (key == null || key.equals(""))
+            {
+                actualKey = System.currentTimeMillis() + "-" + UUID.randomUUID().toString();
+            }
+            else
+            {
+                actualKey = key + "-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString();
+            }
+
             buffer = (ListableObjectStore<Serializable>) objectStoreManager.getObjectStore(storePrefix + "." + group, persistent);
             buffer.store(actualKey, payload);
-
-            /*
-            // This is to minimise duplicates in case of unexpected shutdown
-            Transaction tx = TransactionCoordination.getInstance().getTransaction();
-            if (tx != null && tx.isBegun())
-            {
-                // Commit current transaction as the payload is stored into the object store
-                tx.commit();
-            }
-            */
 
             List<Serializable> allKeys = buffer.allKeys();
 
@@ -188,12 +189,27 @@ public class BufferAggregatorModule
                 {
                     // Process aggregated payload
                     afterChain.process(aggregatedPayloads);
+
+                    // This is to ensure that the aggregated message is sent reliably in case the flow terminates unexpectedly.
+                    Transaction tx = TransactionCoordination.getInstance().getTransaction();
+                    if (!aggregatedPayloads.isEmpty() && tx != null && tx.isBegun())
+                    {
+                        tx.commit();
+                    }
                 }
 
                 try
                 {
                     // Clean the buffer
                     cleanBuffer(buffer, sortedKeys);
+                }
+                catch (Exception e)
+                {
+                    logger.error("Buffered messages were sent successfully, but it was not possible to clean the buffer for group '" + group + "' (this might cause some messages to be sent more than once)", e);
+                }
+
+                try
+                {
                     groups.remove(group);
                 }
                 catch (ObjectDoesNotExistException e)
@@ -202,7 +218,7 @@ public class BufferAggregatorModule
                 }
                 catch (Exception e)
                 {
-                    logger.error("Buffered messages wer successfully sent, but it was not possible to clean the buffer for group '" + group + "', this might cause some messages to be sent more that once", e);
+                    logger.error("Buffered messages were sent successfully, but it was not possible to remove the expired group '" + group + "' (this will cause the group to be flushed again)", e);
                 }
             }
         }
@@ -220,8 +236,7 @@ public class BufferAggregatorModule
             }
             catch (Exception ex)
             {
-                String currentKey = actualKey.substring(0, actualKey.lastIndexOf("-"));
-                logger.error("Unable to remove the latest message from the object store, this will cause the messages to be sent more that once (group: " + group + ", key: " + currentKey + ")", e);
+                logger.error("Unable to remove the latest message from the object store, this will cause the messages to be sent more than once (group: " + group + ", key: " + actualKey + ")", e);
             }
 
             throw new BufferException("Unable to buffer message", e);
@@ -276,12 +291,27 @@ public class BufferAggregatorModule
                         {
                             // Process aggregated payload
                             afterChain.process(aggregatedPayloads);
+
+                            // This is to ensure that the aggregated message is sent reliably in case the flow terminates unexpectedly.
+                            Transaction tx = TransactionCoordination.getInstance().getTransaction();
+                            if (!aggregatedPayloads.isEmpty() && tx != null && tx.isBegun())
+                            {
+                                tx.commit();
+                            }
                         }
 
                         try
                         {
                             // Clean the buffer
                             cleanBuffer(buffer, sortedKeys);
+                        }
+                        catch (Exception e)
+                        {
+                            logger.error("Buffered messages were sent successfully, but it was not possible to clean the buffer for group '" + group + "' (this might cause some messages to be sent more than once)", e);
+                        }
+
+                        try
+                        {
                             groups.remove(group);
                         }
                         catch (ObjectDoesNotExistException e)
@@ -290,7 +320,7 @@ public class BufferAggregatorModule
                         }
                         catch (Exception e)
                         {
-                            logger.error("Buffered messages wer successfully sent, but it was not possible to clean the buffer for group '" + group + "' (this might cause some messages to be sent more than once)", e);
+                            logger.error("Buffered messages were sent successfully, but it was not possible to remove the expired group '" + group + "' (this will cause the group to be flushed again)", e);
                         }
                     }
                     catch (Exception e)
