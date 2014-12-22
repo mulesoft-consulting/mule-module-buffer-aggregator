@@ -11,6 +11,7 @@
 package com.mule.module.bufferaggregator;
 
 import org.mule.api.MuleContext;
+import org.mule.api.annotations.Category;
 import org.mule.api.annotations.Module;
 import org.mule.api.annotations.Configurable;
 import org.mule.api.annotations.Processor;
@@ -41,6 +42,7 @@ import java.util.concurrent.locks.Lock;
  * @author Simone Avossa
  */
 @Module(friendlyName="Buffer Aggregator", name="bufferaggregator", schemaVersion="1.0.0-SNAPSHOT")
+@Category(name = "org.mule.tooling.category.flowControl", description = "Flow Control")
 public class BufferAggregatorModule
 {
     public static final String BUFFER_GROUPS_STORE = "groups";
