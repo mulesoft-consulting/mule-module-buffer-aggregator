@@ -28,12 +28,10 @@ import org.mule.transaction.TransactionCoordination;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.locks.Lock;
 
 /**
@@ -80,6 +78,8 @@ public class BufferAggregatorModule
 
     @Inject
     private MuleContext muleContext;
+
+    private String sharedObjectStoreLockId;
 
     public void setBufferSize(int bufferSize)
     {
@@ -141,6 +141,15 @@ public class BufferAggregatorModule
         return muleContext;
     }
 
+    @PostConstruct
+    public void init()
+    {
+        if (sharedObjectStoreLockId == null)
+        {
+            sharedObjectStoreLockId = new Random().nextInt(1000) + "-" + System.currentTimeMillis() + "-lock";
+        }
+    }
+
     /**
      * Buffer the payload of the incoming message
      *
@@ -152,7 +161,7 @@ public class BufferAggregatorModule
     @Processor(intercepting = true)
     public void buffer(SourceCallback afterChain, String group, @Optional String key, @Payload Serializable payload) throws BufferException
     {
-        Lock lock = muleContext.getLockFactory().createLock(group);
+        Lock lock = muleContext.getLockFactory().createLock(sharedObjectStoreLockId);
         lock.lock();
 
         String actualKey = null;
@@ -160,7 +169,7 @@ public class BufferAggregatorModule
 
         try
         {
-            ListableObjectStore<Long> groups = (ListableObjectStore<Long>) objectStoreManager.getObjectStore(storePrefix + "." + BUFFER_GROUPS_STORE, persistent);
+            ListableObjectStore<Long> groups = (ListableObjectStore<Long>) objectStoreManager.getObjectStore(storePrefix + "." + BUFFER_GROUPS_STORE, persistent, ObjectStoreManager.UNBOUNDED, ObjectStoreManager.UNBOUNDED, -1);
 
             if(!groups.contains(group))
             {
@@ -176,7 +185,7 @@ public class BufferAggregatorModule
                 actualKey = key + "-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString();
             }
 
-            buffer = (ListableObjectStore<Serializable>) objectStoreManager.getObjectStore(storePrefix + "." + group, persistent);
+            buffer = (ListableObjectStore<Serializable>) objectStoreManager.getObjectStore(storePrefix + "." + group, persistent, ObjectStoreManager.UNBOUNDED, ObjectStoreManager.UNBOUNDED, -1);
             buffer.store(actualKey, payload);
 
             List<Serializable> allKeys = buffer.allKeys();
@@ -260,7 +269,7 @@ public class BufferAggregatorModule
     {
         try
         {
-            ListableObjectStore<Long> groups = (ListableObjectStore<Long>) objectStoreManager.getObjectStore(storePrefix + "." + BUFFER_GROUPS_STORE, persistent);
+            ListableObjectStore<Long> groups = (ListableObjectStore<Long>) objectStoreManager.getObjectStore(storePrefix + "." + BUFFER_GROUPS_STORE, persistent, ObjectStoreManager.UNBOUNDED, ObjectStoreManager.UNBOUNDED, -1);
             List<Serializable> allKeys = groups.allKeys();
 
             for (int i = 0; i < allKeys.size(); i++)
@@ -279,11 +288,11 @@ public class BufferAggregatorModule
                 if (time > -1 && (time + bufferTimeToLive < System.currentTimeMillis())) {
                     String group = (String) allKeys.get(i);
 
-                    Lock lock = muleContext.getLockFactory().createLock(group);
+                    Lock lock = muleContext.getLockFactory().createLock(sharedObjectStoreLockId);
                     lock.lock();
 
                     try {
-                        ListableObjectStore<Serializable> buffer = (ListableObjectStore<Serializable>) objectStoreManager.getObjectStore(storePrefix + "." + group, persistent);
+                        ListableObjectStore<Serializable> buffer = (ListableObjectStore<Serializable>) objectStoreManager.getObjectStore(storePrefix + "." + group, persistent, ObjectStoreManager.UNBOUNDED, ObjectStoreManager.UNBOUNDED, -1);
                         List<Serializable> bufferAllKeys = buffer.allKeys();
 
                         List<String> sortedKeys = sortKeys(bufferAllKeys);
