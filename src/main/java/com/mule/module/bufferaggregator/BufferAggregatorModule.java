@@ -28,7 +28,6 @@ import org.mule.transaction.TransactionCoordination;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import java.io.Serializable;
 import java.util.*;
@@ -78,8 +77,6 @@ public class BufferAggregatorModule
 
     @Inject
     private MuleContext muleContext;
-
-    private String sharedObjectStoreLockId;
 
     public void setBufferSize(int bufferSize)
     {
@@ -141,15 +138,6 @@ public class BufferAggregatorModule
         return muleContext;
     }
 
-    @PostConstruct
-    public void init()
-    {
-        if (sharedObjectStoreLockId == null)
-        {
-            sharedObjectStoreLockId = new Random().nextInt(1000) + "-" + System.currentTimeMillis() + "-lock";
-        }
-    }
-
     /**
      * Buffer the payload of the incoming message
      *
@@ -161,7 +149,7 @@ public class BufferAggregatorModule
     @Processor(intercepting = true)
     public void buffer(SourceCallback afterChain, String group, @Optional String key, @Payload Serializable payload) throws BufferException
     {
-        Lock lock = muleContext.getLockFactory().createLock(sharedObjectStoreLockId);
+        Lock lock = muleContext.getLockFactory().createLock(group);
         lock.lock();
 
         String actualKey = null;
@@ -169,7 +157,7 @@ public class BufferAggregatorModule
 
         try
         {
-            ListableObjectStore<Long> groups = (ListableObjectStore<Long>) objectStoreManager.getObjectStore(storePrefix + "." + BUFFER_GROUPS_STORE, persistent, ObjectStoreManager.UNBOUNDED, ObjectStoreManager.UNBOUNDED, -1);
+            ListableObjectStore<Long> groups = (ListableObjectStore<Long>) objectStoreManager.getObjectStore(storePrefix + "." + BUFFER_GROUPS_STORE, persistent);
 
             if(!groups.contains(group))
             {
@@ -185,7 +173,7 @@ public class BufferAggregatorModule
                 actualKey = key + "-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString();
             }
 
-            buffer = (ListableObjectStore<Serializable>) objectStoreManager.getObjectStore(storePrefix + "." + group, persistent, ObjectStoreManager.UNBOUNDED, ObjectStoreManager.UNBOUNDED, -1);
+            buffer = (ListableObjectStore<Serializable>) objectStoreManager.getObjectStore(storePrefix + "." + group, persistent);
             buffer.store(actualKey, payload);
 
             List<Serializable> allKeys = buffer.allKeys();
@@ -199,7 +187,9 @@ public class BufferAggregatorModule
                 if (!aggregatedPayloads.isEmpty())
                 {
                     // Process aggregated payload
-                    afterChain.process(aggregatedPayloads);
+                    Map<String, Object> properties = new HashMap<String, Object>();
+                    properties.put("group", group);
+                    afterChain.process(aggregatedPayloads, properties);
 
                     // This is to ensure that the aggregated message is sent reliably in case the flow terminates unexpectedly.
                     Transaction tx = TransactionCoordination.getInstance().getTransaction();
@@ -229,7 +219,12 @@ public class BufferAggregatorModule
                 }
                 catch (Exception e)
                 {
-                    logger.error("Buffered messages were sent successfully, but it was not possible to remove the expired group '" + group + "' (this will cause the group to be flushed again)", e);
+                    logger.warn("Buffered messages were sent successfully, but it was not possible to remove the expired group '" + group + "' (this might cause the group to be flushed again)");
+
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug("Unable to remove group '" + group + "' from the object store", e);
+                    }
                 }
             }
         }
@@ -269,7 +264,7 @@ public class BufferAggregatorModule
     {
         try
         {
-            ListableObjectStore<Long> groups = (ListableObjectStore<Long>) objectStoreManager.getObjectStore(storePrefix + "." + BUFFER_GROUPS_STORE, persistent, ObjectStoreManager.UNBOUNDED, ObjectStoreManager.UNBOUNDED, -1);
+            ListableObjectStore<Long> groups = (ListableObjectStore<Long>) objectStoreManager.getObjectStore(storePrefix + "." + BUFFER_GROUPS_STORE, persistent);
             List<Serializable> allKeys = groups.allKeys();
 
             for (int i = 0; i < allKeys.size(); i++)
@@ -288,11 +283,12 @@ public class BufferAggregatorModule
                 if (time > -1 && (time + bufferTimeToLive < System.currentTimeMillis())) {
                     String group = (String) allKeys.get(i);
 
-                    Lock lock = muleContext.getLockFactory().createLock(sharedObjectStoreLockId);
+                    Lock lock = muleContext.getLockFactory().createLock(group);
                     lock.lock();
 
-                    try {
-                        ListableObjectStore<Serializable> buffer = (ListableObjectStore<Serializable>) objectStoreManager.getObjectStore(storePrefix + "." + group, persistent, ObjectStoreManager.UNBOUNDED, ObjectStoreManager.UNBOUNDED, -1);
+                    try
+                    {
+                        ListableObjectStore<Serializable> buffer = (ListableObjectStore<Serializable>) objectStoreManager.getObjectStore(storePrefix + "." + group, persistent);
                         List<Serializable> bufferAllKeys = buffer.allKeys();
 
                         List<String> sortedKeys = sortKeys(bufferAllKeys);
@@ -301,7 +297,9 @@ public class BufferAggregatorModule
                         if (!aggregatedPayloads.isEmpty())
                         {
                             // Process aggregated payload
-                            afterChain.process(aggregatedPayloads);
+                            Map<String, Object> properties = new HashMap<String, Object>();
+                            properties.put("group", group);
+                            afterChain.process(aggregatedPayloads, properties);
 
                             // This is to ensure that the aggregated message is sent reliably in case the flow terminates unexpectedly.
                             Transaction tx = TransactionCoordination.getInstance().getTransaction();
@@ -331,7 +329,12 @@ public class BufferAggregatorModule
                         }
                         catch (Exception e)
                         {
-                            logger.error("Buffered messages were sent successfully, but it was not possible to remove the expired group '" + group + "' (this will cause the group to be flushed again)", e);
+                            logger.warn("Buffered messages were sent successfully, but it was not possible to remove the expired group '" + group + "' (this might cause the group to be flushed again)");
+
+                            if (logger.isDebugEnabled())
+                            {
+                                logger.debug("Unable to remove group '" + group + "' from the object store", e);
+                            }
                         }
                     }
                     catch (Exception e)
