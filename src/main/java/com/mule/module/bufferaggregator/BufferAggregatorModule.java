@@ -28,6 +28,7 @@ import org.mule.transaction.TransactionCoordination;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import java.io.Serializable;
 import java.util.*;
@@ -77,6 +78,8 @@ public class BufferAggregatorModule
 
     @Inject
     private MuleContext muleContext;
+
+    private ListableObjectStore<Long> groups;
 
     public void setBufferSize(int bufferSize)
     {
@@ -138,6 +141,12 @@ public class BufferAggregatorModule
         return muleContext;
     }
 
+    @PostConstruct
+    public void init()
+    {
+        groups = (ListableObjectStore<Long>) objectStoreManager.getObjectStore(storePrefix + "." + BUFFER_GROUPS_STORE, persistent);
+    }
+
     /**
      * Buffer the payload of the incoming message
      *
@@ -157,11 +166,12 @@ public class BufferAggregatorModule
 
         try
         {
-            ListableObjectStore<Long> groups = (ListableObjectStore<Long>) objectStoreManager.getObjectStore(storePrefix + "." + BUFFER_GROUPS_STORE, persistent);
-
-            if(!groups.contains(group))
+            synchronized (groups)
             {
-                groups.store(group, System.currentTimeMillis());
+                if (!groups.contains(group))
+                {
+                    groups.store(group, System.currentTimeMillis());
+                }
             }
 
             if (key == null || key.equals(""))
@@ -264,7 +274,6 @@ public class BufferAggregatorModule
     {
         try
         {
-            ListableObjectStore<Long> groups = (ListableObjectStore<Long>) objectStoreManager.getObjectStore(storePrefix + "." + BUFFER_GROUPS_STORE, persistent);
             List<Serializable> allKeys = groups.allKeys();
 
             for (int i = 0; i < allKeys.size(); i++)
