@@ -212,7 +212,8 @@ public class BufferAggregatorModule
                 try
                 {
                     // Clean the buffer
-                    cleanBuffer(buffer, sortedKeys);
+                    //cleanBuffer(buffer, sortedKeys);
+                    cleanBuffer(buffer);
                 }
                 catch (Exception e)
                 {
@@ -321,7 +322,8 @@ public class BufferAggregatorModule
                         try
                         {
                             // Clean the buffer
-                            cleanBuffer(buffer, sortedKeys);
+                            //cleanBuffer(buffer, sortedKeys);
+                            cleanBuffer(buffer);
                         }
                         catch (Exception e)
                         {
@@ -380,6 +382,11 @@ public class BufferAggregatorModule
         }
 
         return aggregatedPayloads;
+    }
+
+    private void cleanBuffer(ListableObjectStore<Serializable> buffer) throws ObjectStoreException
+    {
+        objectStoreManager.disposeStore(buffer);
     }
 
     private void cleanBuffer(ListableObjectStore<Serializable> buffer, List<String> keys) throws ObjectStoreException
